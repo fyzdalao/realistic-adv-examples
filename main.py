@@ -106,7 +106,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         '--data-dir',
-        default='/data/imagenet/val',
+        default='data/imagenet/val',
         type=str,
     )
     parser.add_argument(
