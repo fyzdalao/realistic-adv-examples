@@ -121,6 +121,10 @@ if __name__ == "__main__":
                         help='Whether strong preprocessing (i.e., JPEG, Resize, Crop) '
                         'should be applied before feeding the image to the classifier')
     parser.add_argument('--model-threshold', default=0.25, type=float, help='The threshold to use for the API model')
+    parser.add_argument('--defense',
+                        default='none',
+                        type=str,
+                        help='Defense mechanism to use: none, inRND, PSD, or both (for both inRND and PSD)')
     parser.add_argument('--discrete',
                         default='0',
                         type=str,

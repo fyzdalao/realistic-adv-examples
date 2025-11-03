@@ -13,9 +13,11 @@ class TorchModelWrapper(ModelWrapper):
                  n_class: int = 10,
                  im_mean: MeanStdType = None,
                  im_std: MeanStdType = None,
-                 take_sigmoid: bool = True):
+                 take_sigmoid: bool = True,
+                 defense: str = 'none'):
         super().__init__(n_class, im_mean, im_std, take_sigmoid)
         self._model = model
+        self.defense = defense
 
     def make_model_eval(self):
         self._model.eval()
@@ -49,7 +51,7 @@ class TorchModelWrapper(ModelWrapper):
     '''
     def _predict_prob(self, image: torch.Tensor, verbose: bool = False) -> torch.Tensor:
 
-        rnd_nu = 0.0
+        rnd_nu = 0.02
 
         with torch.no_grad():
             if len(image.size()) != 4:
@@ -58,35 +60,37 @@ class TorchModelWrapper(ModelWrapper):
             # 在preprocess之前进行添加噪音
             # 此时image的值在0-1之间
 
-            noise_in = torch.normal(mean=0, std=1, size=image.size(), device=image.device) * rnd_nu
-            image = (image + noise_in).clip(0, 1)
+
+            if self.defense == 'inRND' or self.defense == 'both':
+                noise_in = torch.normal(mean=0, std=1, size=image.size(), device=image.device) * rnd_nu
+                image = (image + noise_in).clip(0, 1)
 
             image = self.preprocess(image)
             logits = self._model(image)
             self.num_queries += image.size(0)
 
+
             # do something to logits.
-            prob_ori = F.softmax(logits, dim=1)
-            value, index_ori = torch.topk(prob_ori, k=2, dim=1)
-            margin_ori = value[:, 0] - value[:, 1]
+            if self.defense == 'PSD' or self.defense == 'both':
+                prob_ori = F.softmax(logits, dim=1)
+                value, index_ori = torch.topk(prob_ori, k=2, dim=1)
+                margin_ori = value[:, 0] - value[:, 1]
 
-            #pawn_thres = 0.05
-            #pawn_thres = 0
+                #pawn_thres = 0.05
+                #pawn_thres = 0
+                pawn_thres = 0.1
 
-            pawn_thres = 0.1
+                step = 0.0025
 
-            step = 0.0025
+                decision = margin_ori < 0  # All False
+                temp = 0
+                while temp < pawn_thres:
+                    temp += step
+                    decision |= ((margin_ori > temp - step/2) & (margin_ori < temp))
+                idx_to_swap = decision
 
-            decision = margin_ori < 0  # All False
-            temp = 0
-            while temp < pawn_thres:
-                temp += step
-                decision |= ((margin_ori > temp - step/2) & (margin_ori < temp))
-            idx_to_swap = decision
-
-
-            temp = logits[idx_to_swap, index_ori[idx_to_swap, 0]]
-            logits[idx_to_swap, index_ori[idx_to_swap, 0]] = logits[idx_to_swap, index_ori[idx_to_swap, 1]]
-            logits[idx_to_swap, index_ori[idx_to_swap, 1]] = temp
+                temp = logits[idx_to_swap, index_ori[idx_to_swap, 0]]
+                logits[idx_to_swap, index_ori[idx_to_swap, 0]] = logits[idx_to_swap, index_ori[idx_to_swap, 1]]
+                logits[idx_to_swap, index_ori[idx_to_swap, 1]] = temp
 
         return logits

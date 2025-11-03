@@ -9,7 +9,7 @@ from src.attacks.queries_counter import QueriesCounter
 from src.json_list import JSONList
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=False)
 class AttackResults:
     path: Path
     successes: int = 0
