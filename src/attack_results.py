@@ -97,24 +97,29 @@ class AttackResults:
 
         return results_dict
 
-    def save_results(self, verbose: bool = True):
+    def save_results(self, verbose: bool = True, save_detailed_traces: bool = False):
         if not self.path.exists():
             self.path.mkdir()
         with open(self.path / "aggregated_results.json", 'w') as f:
             json.dump(self.get_aggregated_results_dict(), f, indent=4)
         with open(self.path / "full_results.json", 'w') as f:
             json.dump(self.get_full_results_dict(), f, indent=4)
-        np.save(self.path / "distances.npy", np.array(self.distances))
-        np.save(self.path / "queries.npy", np.array(self._get_overall_queries()))
-        np.save(self.path / "unsafe_queries.npy", np.array(self._get_overall_unsafe_queries()))
-        np.save(self.path / "failed_distances.npy", np.array(self.failed_distances))
-        np.save(self.path / "failed_queries.npy", np.array(self._get_overall_failed_queries()))
-        if self.queries_counters:
-            self._distances_traces_jsonlist.append(
-                list(map(lambda distance_info: distance_info.__dict__, self.queries_counters[-1].distances)))
-        if self.failed_queries_counters:
-            self._failed_distances_traces_jsonlist.append(
-                list(map(lambda distance_info: distance_info.__dict__, self.failed_queries_counters[-1].distances)))
+        
+        # Only save detailed .npy files and traces if requested
+        # (useful for quick preliminary experiments)
+        if save_detailed_traces:
+            np.save(self.path / "distances.npy", np.array(self.distances))
+            np.save(self.path / "queries.npy", np.array(self._get_overall_queries()))
+            np.save(self.path / "unsafe_queries.npy", np.array(self._get_overall_unsafe_queries()))
+            np.save(self.path / "failed_distances.npy", np.array(self.failed_distances))
+            np.save(self.path / "failed_queries.npy", np.array(self._get_overall_failed_queries()))
+            if self.queries_counters:
+                self._distances_traces_jsonlist.append(
+                    list(map(lambda distance_info: distance_info.__dict__, self.queries_counters[-1].distances)))
+            if self.failed_queries_counters:
+                self._failed_distances_traces_jsonlist.append(
+                    list(map(lambda distance_info: distance_info.__dict__, self.failed_queries_counters[-1].distances)))
+        
         if verbose:
             print(f"Saved results to {self.path}")
 

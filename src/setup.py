@@ -24,7 +24,8 @@ DISTANCES = {"linf": linf, "l2": l2}
 
 def setup_model_and_data(args: Namespace, device: torch.device) -> tuple[ModelWrapper, data.DataLoader]:
     if args.dataset == 'resnet_imagenet':
-        inner_model = models.__dict__["resnet50"](weights=ResNet50_Weights.IMAGENET1K_V1).to(device).eval()
+        #inner_model = models.__dict__["resnet50"](weights=ResNet50_Weights.IMAGENET1K_V1).to(device).eval()
+        inner_model = models.__dict__["resnet50"](weights=ResNet50_Weights.IMAGENET1K_V2).to(device).eval()
         inner_model = torch.nn.DataParallel(inner_model, device_ids=[0])
         test_loader = dataset.load_imagenet_test_data(args.batch, args.data_dir)
         model = TorchModelWrapper(inner_model,

@@ -10,6 +10,7 @@ from src.setup import setup_attack, setup_model_and_data, setup_out_dir
 def main(args):
     targeted = True if args.targeted == '1' else False
     early_stopping = False if args.early == '0' else True
+    save_detailed_traces = False if args.save_detailed_traces == '0' else True
 
     print(args)
 
@@ -70,13 +71,13 @@ def main(args):
             attack_results = attack_results.update_with_failure(dist, queries_counter, extra_results)
 
         attack_results.log_results(count)
-        attack_results.save_results(verbose=True)
+        attack_results.save_results(verbose=True, save_detailed_traces=save_detailed_traces)
         count += 1
         # if attack_results.has_simulated_counters:
         #     print("Simulated results:")
         #     attack_results.simulated_self.log_results(i)
 
-    attack_results.save_results(verbose=True)
+    attack_results.save_results(verbose=True, save_detailed_traces=save_detailed_traces)
 
 
 if __name__ == "__main__":
@@ -85,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument('--dataset', default='imagenet', type=str, help='Dataset')
     parser.add_argument('--targeted', default='0', type=str, help='targeted or untargeted')
     parser.add_argument('--norm', default='linf', type=str, help='Norm for attack, linf only')
-    parser.add_argument('--num', default=1000, type=int, help='Number of samples to be attacked from test dataset.')
+    parser.add_argument('--num', default=25, type=int, help='Number of samples to be attacked from test dataset.')
     parser.add_argument('--max-queries', default=None, type=int, help='Maximum queries for the attack')
     parser.add_argument('--max-unsafe-queries', default=None, type=int, help='Maximum unsafe queries for the attack')
     parser.add_argument('--batch', default=1, type=int, help='attack batch size.')
@@ -101,7 +102,7 @@ if __name__ == "__main__":
                         help='Tolerance for line search w.r.t. previous iteration')
     parser.add_argument(
         '--out-dir',
-        default='/local/home/edebenedetti/exp-results/realistic-adv-examples/',
+        default='results',
         type=str,
     )
     parser.add_argument(
@@ -252,6 +253,11 @@ if __name__ == "__main__":
                         default=1.1,
                         type=float,
                         help='Multiplier used to increase search radius')
+    parser.add_argument('--save-detailed-traces',
+                        default='0',
+                        type=str,
+                        help='Whether to save detailed traces (distances_traces.json and detailed .npy files). '
+                        'Set to 0 for quick preliminary experiments.')
     
     _args = parser.parse_args()
     main(_args)

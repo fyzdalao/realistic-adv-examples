@@ -613,3 +613,5 @@ queries_table.csv
 ablations_improvements.ipynb
 ablations_raw_numbers.csv
 plots.sh
+/data/imagenet/ILSVRC2012_img_val/
+/data/imagenet/val/
