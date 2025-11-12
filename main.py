@@ -1,4 +1,5 @@
 import argparse
+import gc
 
 import numpy as np
 import torch
@@ -73,6 +74,13 @@ def main(args):
         attack_results.log_results(count)
         attack_results.save_results(verbose=True, save_detailed_traces=save_detailed_traces)
         count += 1
+        
+        # Clear GPU cache and run garbage collection to prevent memory accumulation
+        # This is particularly important for attacks like GeoDA that create many tensors
+        del adv  # adv is a large tensor that should be explicitly deleted
+        torch.cuda.empty_cache()
+        gc.collect()
+        
         # if attack_results.has_simulated_counters:
         #     print("Simulated results:")
         #     attack_results.simulated_self.log_results(i)
@@ -231,7 +239,7 @@ if __name__ == "__main__":
                         default=2e-4,
                         type=float,
                         help='Delta parameter for GeoDA')
-    parser.add_argument('--geoda-max-num-evals', default=1e4, type=int, help='Max number of evaluations for GeoDA')
+    parser.add_argument('--geoda-max-num-evals', default=2500, type=int, help='Max number of evaluations for GeoDA')#ori:1e4
     parser.add_argument('--geoda-init-num-evals', default=100, type=int, help='GeoDA init num evals')
     parser.add_argument('--geoda-bias-coef',
                         default=0.0,
