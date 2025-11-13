@@ -1,0 +1,1 @@
+python main.py --early 0 --dataset resnet_imagenet --norm l2 --num 2 --max-unsafe-queries 15000 --max-queries 15000 --out-dir results --attack opt --opt-beta 0.01 --defense=none --gpu 1

@@ -15,7 +15,11 @@ def main(args):
 
     print(args)
 
-    device = torch.device("cuda")
+    if not torch.cuda.is_available():
+        raise RuntimeError("CUDA 不可用，无法根据 --gpu 参数选择 GPU。")
+
+    torch.cuda.set_device(args.gpu)
+    device = torch.device(f"cuda:{args.gpu}")
 
     model, test_loader = setup_model_and_data(args, device)
     exp_out_dir = setup_out_dir(args)
@@ -224,6 +228,7 @@ if __name__ == "__main__":
                         type=int,
                         help='Number of gradient queries for Sign OPT')
     parser.add_argument('--sign-opt-momentum', default=0., type=float, help='Momentum for Sign OPT')
+    parser.add_argument('--gpu', default=0, type=int, help='选择使用的 GPU 编号，如 0 或 1')
     
     
     parser.add_argument('--geoda-n-searches',
