@@ -15,8 +15,8 @@ class ModelWrapper(nn.Module, metaclass=abc.ABCMeta):
                  take_sigmoid: bool = True):
         super().__init__()
         self.num_queries = 0
-        self.im_mean = torch.Tensor(im_mean).view(1, 3, 1, 1).cuda() if im_mean is not None else None
-        self.im_std = torch.Tensor(im_std).view(1, 3, 1, 1).cuda() if im_std is not None else None
+        self.im_mean = torch.tensor(im_mean, dtype=torch.float32).view(1, 3, 1, 1) if im_mean is not None else None
+        self.im_std = torch.tensor(im_std, dtype=torch.float32).view(1, 3, 1, 1) if im_std is not None else None
         self.n_class = n_class
         self.take_sigmoid = take_sigmoid
         if self.n_class == 2:

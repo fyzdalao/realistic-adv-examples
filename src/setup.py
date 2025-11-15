@@ -23,11 +23,17 @@ DISTANCES = {"linf": linf, "l2": l2}
 
 
 def setup_model_and_data(args: Namespace, device: torch.device) -> tuple[ModelWrapper, data.DataLoader]:
+    num_workers = max(0, args.data_workers)
+    pin_memory = args.pin_memory == '1'
+    prefetch_factor = args.prefetch_factor if num_workers > 0 else None
     if args.dataset == 'resnet_imagenet':
         #inner_model = models.__dict__["resnet50"](weights=ResNet50_Weights.IMAGENET1K_V1).to(device).eval()
         inner_model = models.__dict__["resnet50"](weights=ResNet50_Weights.IMAGENET1K_V2).to(device).eval()
-        inner_model = torch.nn.DataParallel(inner_model, device_ids=[0])
-        test_loader = dataset.load_imagenet_test_data(args.batch, args.data_dir)
+        test_loader = dataset.load_imagenet_test_data(args.batch,
+                                                      args.data_dir,
+                                                      num_workers=num_workers,
+                                                      pin_memory=pin_memory,
+                                                      prefetch_factor=prefetch_factor)
         model = TorchModelWrapper(inner_model,
                                   n_class=1000,
                                   im_mean=(0.485, 0.456, 0.406),
@@ -36,8 +42,11 @@ def setup_model_and_data(args: Namespace, device: torch.device) -> tuple[ModelWr
     elif args.dataset == 'binary_imagenet':
         inner_model = binary_resnet50.BinaryResNet50.load_from_checkpoint("checkpoints/binary_imagenet.ckpt").model.to(
             device).eval()
-        inner_model = torch.nn.DataParallel(inner_model, device_ids=[0])
-        test_loader = dataset.load_binary_imagenet_test_data(args.batch, args.data_dir)
+        test_loader = dataset.load_binary_imagenet_test_data(args.batch,
+                                                             args.data_dir,
+                                                             num_workers=num_workers,
+                                                             pin_memory=pin_memory,
+                                                             prefetch_factor=prefetch_factor)
         model = TorchModelWrapper(inner_model, n_class=2, im_mean=(0.485, 0.456, 0.406), im_std=(0.229, 0.224, 0.225),
                                   defense=args.defense)
     elif args.dataset == 'imagenet_nsfw':
@@ -48,7 +57,11 @@ def setup_model_and_data(args: Namespace, device: torch.device) -> tuple[ModelWr
                                   im_std=(0.26862954, 0.26130258, 0.27577711),
                                   take_sigmoid=False,
                                   defense=args.defense)
-        test_loader = dataset.load_imagenet_nsfw_test_data(args.batch, args.data_dir)
+        test_loader = dataset.load_imagenet_nsfw_test_data(args.batch,
+                                                           args.data_dir,
+                                                           num_workers=num_workers,
+                                                           pin_memory=pin_memory,
+                                                           prefetch_factor=prefetch_factor)
     else:
         raise ValueError("Invalid model")
 

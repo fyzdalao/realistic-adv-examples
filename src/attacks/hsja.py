@@ -263,7 +263,7 @@ class HSJA(PerturbationAttack):
                 print("Out of queries")
                 break
 
-        return perturbed, queries_counter, dist, True, {}
+        return perturbed.unsqueeze(0), queries_counter, dist, True, {}
 
     def decision_function(self, model: ModelWrapper, images: torch.Tensor, params, queries_counter: QueriesCounter,
                           attack_phase: HSJAttackPhase,

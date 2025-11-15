@@ -221,7 +221,7 @@ class GeoDA(PerturbationAttack):
                 print("Out of queries")
                 break
 
-        return perturbed, queries_counter, dist, True, {}
+        return perturbed.unsqueeze(0), queries_counter, dist, True, {}
 
     def decision_function(self, model: ModelWrapper, images: torch.Tensor, params, queries_counter: QueriesCounter,
                           attack_phase: GeoDAttackPhase,
@@ -259,11 +259,11 @@ class GeoDA(PerturbationAttack):
         clip_max, clip_min = params['clip_max'], params['clip_min']
 
         # Generate random vectors.
-        noise_shape = [num_evals] + list(params['shape'])
+        noise_shape = torch.Size([num_evals] + list(params['shape']))
         if params['distance'] == l2:
             rv = self.create_random_noise(noise_shape, params['dim_reduc_factor'], device=sample.device)
         elif params['distance'] == linf:
-            rv = torch.empty(*noise_shape, device=sample.device).uniform_(-1, 1)  # type: ignore
+            rv = torch.empty(noise_shape, device=sample.device).uniform_(-1, 1)  # type: ignore
         else:
             raise ValueError(f'Unknown constraint {params["constraint"]}.')
         

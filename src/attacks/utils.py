@@ -206,11 +206,12 @@ def _batched_line_search_body(attack: PerturbationAttack | DirectionAttack,
                               batch_size: int = MAX_BATCH_SIZE,
                               equivalent_simulated_queries: int = 1,
                               count_last_batch_for_sim: bool = False) -> tuple[float, QueriesCounter, bool]:
-    success = torch.tensor([True])
+    device = x.device
+    success = torch.tensor([True], device=device)
     batch_idx = 0
-    lbds_inner_shape = tuple([1] * (len(x.shape) - 1))
-    previous_last_lbd = torch.tensor([initial_lbd])
-    lbds = np.array([initial_lbd])
+    lbds_inner_shape = (1, ) * (len(x.shape) - 1)
+    previous_last_lbd = torch.tensor([initial_lbd], device=device)
+    lbds = torch.tensor([initial_lbd], device=device)
 
     while success.all():
         # Update the last lbd (in case the whole next batch is unsafe) and the index
@@ -219,15 +220,15 @@ def _batched_line_search_body(attack: PerturbationAttack | DirectionAttack,
         start = batch_idx * batch_size
         end = (batch_idx + 1) * batch_size
         # Compute the steps to do
-        steps_sizes = np.arange(start, end) * step_size
+        step_indices = torch.arange(start, end, device=device, dtype=torch.float32)
+        steps_sizes = step_indices * step_size
         # Subtract the steps from the original distance
         lbds = (initial_lbd - steps_sizes).reshape(-1, *lbds_inner_shape)
         # Compute advex and query the model
-        lbds_torch = torch.from_numpy(lbds).float().to(device=x.device)
         if isinstance(attack, DirectionAttack):
-            batch = attack.get_x_adv(x, theta, lbds_torch)
+            batch = attack.get_x_adv(x, theta, lbds)
         elif isinstance(attack, PerturbationAttack):
-            batch = attack.get_x_adv(x, theta * lbds_torch.unsqueeze(-1))
+            batch = attack.get_x_adv(x, theta * lbds.unsqueeze(-1))
         success, queries_counter = attack.is_correct_boundary_side_batched(model, batch, y, target, queries_counter,
                                                                            phase, x, equivalent_simulated_queries,
                                                                            count_last_batch_for_sim, batch_idx == 0)

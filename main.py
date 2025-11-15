@@ -98,7 +98,7 @@ if __name__ == "__main__":
     parser.add_argument('--dataset', default='imagenet', type=str, help='Dataset')
     parser.add_argument('--targeted', default='0', type=str, help='targeted or untargeted')
     parser.add_argument('--norm', default='linf', type=str, help='Norm for attack, linf only')
-    parser.add_argument('--num', default=25, type=int, help='Number of samples to be attacked from test dataset.')
+    parser.add_argument('--num', default=2, type=int, help='Number of samples to be attacked from test dataset.')
     parser.add_argument('--max-queries', default=None, type=int, help='Maximum queries for the attack')
     parser.add_argument('--max-unsafe-queries', default=None, type=int, help='Maximum unsafe queries for the attack')
     parser.add_argument('--batch', default=1, type=int, help='attack batch size.')
@@ -122,6 +122,18 @@ if __name__ == "__main__":
         default='data/imagenet/val',
         type=str,
     )
+    parser.add_argument('--data-workers',
+                        default=12,
+                        type=int,
+                        help='Number of worker processes for data loading')
+    parser.add_argument('--pin-memory',
+                        default='1',
+                        type=str,
+                        help='Whether to enable pinned memory for data loading (1/0)')
+    parser.add_argument('--prefetch-factor',
+                        default=6,
+                        type=int,
+                        help='Prefetch factor for the DataLoader when num_workers > 0')
     parser.add_argument(
         '--save-img-every',
         default=50,
@@ -277,4 +289,6 @@ if __name__ == "__main__":
                         'Set to 0 for quick preliminary experiments.')
     
     _args = parser.parse_args()
+    if _args.max_unsafe_queries is None:
+        _args.max_unsafe_queries = _args.max_queries
     main(_args)

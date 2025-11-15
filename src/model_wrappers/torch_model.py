@@ -32,7 +32,9 @@ class TorchModelWrapper(ModelWrapper):
     def preprocess(self, image: torch.Tensor) -> torch.Tensor:
         processed = image
         if self.im_mean is not None and self.im_std is not None:
-            processed = (image - self.im_mean) / self.im_std
+            mean = self.im_mean.to(image.device, non_blocking=True)
+            std = self.im_std.to(image.device, non_blocking=True)
+            processed = (image - mean) / std
         return processed
 
 
@@ -51,7 +53,7 @@ class TorchModelWrapper(ModelWrapper):
     '''
     def _predict_prob(self, image: torch.Tensor, verbose: bool = False) -> torch.Tensor:
 
-        rnd_nu = 0.02
+        rnd_nu = 0.01
 
         with torch.no_grad():
             if len(image.size()) != 4:
@@ -80,7 +82,7 @@ class TorchModelWrapper(ModelWrapper):
                 #pawn_thres = 0
                 pawn_thres = 0.1
 
-                step = 0.0025
+                step = 0.002
 
                 decision = margin_ori < 0  # All False
                 temp = 0

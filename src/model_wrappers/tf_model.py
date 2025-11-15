@@ -23,21 +23,25 @@ class TFModelWrapper(ModelWrapper):
         else:
             processed = image
         if self.im_mean is not None and self.im_std is not None:
-            processed = (image - self.im_mean) / self.im_std
+            mean = self.im_mean.to(image.device, non_blocking=True)
+            std = self.im_std.to(image.device, non_blocking=True)
+            processed = (image - mean) / std
         return processed
 
     def forward(self, image: torch.Tensor) -> torch.Tensor:  # type: ignore
         if len(image.size()) != 4:
             image = image.unsqueeze(0)
+        image_device = image.device
         image_tf = tf.constant(image.cpu())
         logits = self._model(image_tf).numpy()
-        return torch.from_numpy(logits).cuda()
+        return torch.from_numpy(logits).to(image_device)
 
     def _predict_prob(self, image: torch.Tensor, verbose=False) -> torch.Tensor:
         if len(image.size()) != 4:
             image = image.unsqueeze(0)
         image = self.preprocess(image)
+        image_device = image.device
         image_tf = tf.constant(image.cpu())
         logits = self._model(image_tf).numpy()
         self.num_queries += image.size(0)
-        return torch.from_numpy(logits).cuda()
+        return torch.from_numpy(logits).to(image_device)
