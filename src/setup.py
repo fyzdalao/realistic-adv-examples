@@ -1,6 +1,6 @@
 import json
 import subprocess
-import uuid
+from datetime import datetime
 from argparse import Namespace
 from pathlib import Path
 
@@ -175,8 +175,11 @@ def setup_out_dir(args: Namespace) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     def make_exp_out_dir_name() -> Path:
-        return out_dir / f"discrete-{args.discrete}_targeted-{args.targeted}_early-{args.early}_{args.search}" \
-                         f"_{args.epsilon if args.epsilon is not None else 0:.3f}_{uuid.uuid4().hex}"
+        timestamp = datetime.now().strftime("%m%d-%H-%M-%S")
+        return out_dir / (
+            f"{timestamp}_discrete-{args.discrete}_targeted-{args.targeted}_early-{args.early}_{args.search}"
+            f"_{args.epsilon if args.epsilon is not None else 0:.3f}"
+        )
 
     exp_out_dir = make_exp_out_dir_name()
     while exp_out_dir.exists():
