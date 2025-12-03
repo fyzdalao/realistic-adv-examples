@@ -8,7 +8,7 @@ import torch
 from foolbox.distances import l2, linf
 from torch.utils import data
 from torchvision import models as models
-from torchvision.models import ResNet50_Weights
+from torchvision.models import ResNet50_Weights, RegNet_X_3_2GF_Weights
 
 from src import dataset
 from src.arch import binary_resnet50, clip_laion_nsfw
@@ -29,6 +29,18 @@ def setup_model_and_data(args: Namespace, device: torch.device) -> tuple[ModelWr
     if args.dataset == 'resnet_imagenet':
         #inner_model = models.__dict__["resnet50"](weights=ResNet50_Weights.IMAGENET1K_V1).to(device).eval()
         inner_model = models.__dict__["resnet50"](weights=ResNet50_Weights.IMAGENET1K_V2).to(device).eval()
+        test_loader = dataset.load_imagenet_test_data(args.batch,
+                                                      args.data_dir,
+                                                      num_workers=num_workers,
+                                                      pin_memory=pin_memory,
+                                                      prefetch_factor=prefetch_factor)
+        model = TorchModelWrapper(inner_model,
+                                  n_class=1000,
+                                  im_mean=(0.485, 0.456, 0.406),
+                                  im_std=(0.229, 0.224, 0.225),
+                                  defense=args.defense)
+    elif args.dataset == 'regnet_imagenet':
+        inner_model = models.__dict__["regnet_x_3_2gf"](weights=RegNet_X_3_2GF_Weights.IMAGENET1K_V2).to(device).eval()
         test_loader = dataset.load_imagenet_test_data(args.batch,
                                                       args.data_dir,
                                                       num_workers=num_workers,

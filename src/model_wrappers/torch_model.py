@@ -51,7 +51,7 @@ class TorchModelWrapper(ModelWrapper):
     '''
     trying to add pawn sacrifice defense
     '''
-    def _predict_prob(self, image: torch.Tensor, verbose: bool = False) -> torch.Tensor:
+    def _predict_prob(self, image: torch.Tensor, verbose: bool = False, use_prob_for_margin: int = 0) -> torch.Tensor:
 
         rnd_nu = 0.01
 
@@ -74,13 +74,21 @@ class TorchModelWrapper(ModelWrapper):
 
             # do something to logits.
             if self.defense == 'PSD' or self.defense == 'both':
-                prob_ori = F.softmax(logits, dim=1)
-                value, index_ori = torch.topk(prob_ori, k=2, dim=1)
-                margin_ori = value[:, 0] - value[:, 1]
+                if use_prob_for_margin == 1:
+                    # 默认逻辑：根据 prob_ori 计算 margin_ori
+                    prob_ori = F.softmax(logits, dim=1)
+                    value, index_ori = torch.topk(prob_ori, k=2, dim=1)
+                    margin_ori = value[:, 0] - value[:, 1]
+                else:
+                    # 根据 logits 计算 margin_ori（logits 最大和第二大的差）
+                    logits_value, index_ori = torch.topk(logits, k=2, dim=1)
+                    margin_ori = logits_value[:, 0] - logits_value[:, 1]
 
-                #pawn_thres = 0.05
-                #pawn_thres = 0
-                pawn_thres = 0.1
+                if use_prob_for_margin == 1 :
+                    pawn_thres = 0.1
+                else:
+                    pawn_thres = 0.2
+                
 
                 step = 0.002
 

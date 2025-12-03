@@ -6,6 +6,7 @@ import torch
 
 from src.attack_results import AttackResults
 from src.setup import setup_attack, setup_model_and_data, setup_out_dir
+from src.test_model_accuracy import test_model_accuracy
 
 
 def main(args):
@@ -22,6 +23,7 @@ def main(args):
     device = torch.device(f"cuda:{args.gpu}")
 
     model, test_loader = setup_model_and_data(args, device)
+    test_model_accuracy(model, args, device)
     exp_out_dir = setup_out_dir(args)
     attack = setup_attack(args)
     attack_results = AttackResults(exp_out_dir)
