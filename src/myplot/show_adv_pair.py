@@ -9,9 +9,9 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_NPY_DIR = SCRIPT_DIR / "npys"
 DEFAULT_PIC_DIR = SCRIPT_DIR / "pics"
 IMAGE_FILES = [
-    "0.npy",
-    "0_adv.npy",
-    "0_advv.npy",
+    "59.npy",
+    "59_adv.npy",
+    "59_advv.npy",
 ]
 
 
@@ -40,7 +40,7 @@ def main():
                         help=f"输出图片路径（默认保存到 {DEFAULT_PIC_DIR} 下并自动命名）")
     parser.add_argument("--times",
                         type=float,
-                        default=5.0,
+                        default=1.0,
                         help="放大对抗扰动的倍数（orig 保持不变）")
     args = parser.parse_args()
 

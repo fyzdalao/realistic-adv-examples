@@ -14,10 +14,14 @@ class TorchModelWrapper(ModelWrapper):
                  im_mean: MeanStdType = None,
                  im_std: MeanStdType = None,
                  take_sigmoid: bool = True,
-                 defense: str = 'none'):
+                 defense: str = 'none',
+                 pawn_thres_prob: float = 0.1,
+                 pawn_thres_logits: float = 0.2):
         super().__init__(n_class, im_mean, im_std, take_sigmoid)
         self._model = model
         self.defense = defense
+        self.pawn_thres_prob = pawn_thres_prob
+        self.pawn_thres_logits = pawn_thres_logits
 
     def make_model_eval(self):
         self._model.eval()
@@ -85,9 +89,9 @@ class TorchModelWrapper(ModelWrapper):
                     margin_ori = logits_value[:, 0] - logits_value[:, 1]
 
                 if use_prob_for_margin == 1 :
-                    pawn_thres = 0.1
+                    pawn_thres = self.pawn_thres_prob
                 else:
-                    pawn_thres = 0.2
+                    pawn_thres = self.pawn_thres_logits
                 
 
                 step = 0.002

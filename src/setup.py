@@ -38,7 +38,9 @@ def setup_model_and_data(args: Namespace, device: torch.device) -> tuple[ModelWr
                                   n_class=1000,
                                   im_mean=(0.485, 0.456, 0.406),
                                   im_std=(0.229, 0.224, 0.225),
-                                  defense=args.defense)
+                                  defense=args.defense,
+                                  pawn_thres_prob=args.pawn_thres_prob,
+                                  pawn_thres_logits=args.pawn_thres_logits)
     elif args.dataset == 'regnet_imagenet':
         inner_model = models.__dict__["regnet_x_3_2gf"](weights=RegNet_X_3_2GF_Weights.IMAGENET1K_V2).to(device).eval()
         test_loader = dataset.load_imagenet_test_data(args.batch,
@@ -50,7 +52,9 @@ def setup_model_and_data(args: Namespace, device: torch.device) -> tuple[ModelWr
                                   n_class=1000,
                                   im_mean=(0.485, 0.456, 0.406),
                                   im_std=(0.229, 0.224, 0.225),
-                                  defense=args.defense)
+                                  defense=args.defense,
+                                  pawn_thres_prob=args.pawn_thres_prob,
+                                  pawn_thres_logits=args.pawn_thres_logits)
     elif args.dataset == 'binary_imagenet':
         inner_model = binary_resnet50.BinaryResNet50.load_from_checkpoint("checkpoints/binary_imagenet.ckpt").model.to(
             device).eval()
@@ -60,7 +64,9 @@ def setup_model_and_data(args: Namespace, device: torch.device) -> tuple[ModelWr
                                                              pin_memory=pin_memory,
                                                              prefetch_factor=prefetch_factor)
         model = TorchModelWrapper(inner_model, n_class=2, im_mean=(0.485, 0.456, 0.406), im_std=(0.229, 0.224, 0.225),
-                                  defense=args.defense)
+                                  defense=args.defense,
+                                  pawn_thres_prob=args.pawn_thres_prob,
+                                  pawn_thres_logits=args.pawn_thres_logits)
     elif args.dataset == 'imagenet_nsfw':
         inner_model = clip_laion_nsfw.CLIPNSFWDetector("b32", "checkpoints").to(device).eval()
         model = TorchModelWrapper(inner_model,
@@ -68,7 +74,9 @@ def setup_model_and_data(args: Namespace, device: torch.device) -> tuple[ModelWr
                                   im_mean=(0.48145466, 0.4578275, 0.40821073),
                                   im_std=(0.26862954, 0.26130258, 0.27577711),
                                   take_sigmoid=False,
-                                  defense=args.defense)
+                                  defense=args.defense,
+                                  pawn_thres_prob=args.pawn_thres_prob,
+                                  pawn_thres_logits=args.pawn_thres_logits)
         test_loader = dataset.load_imagenet_nsfw_test_data(args.batch,
                                                            args.data_dir,
                                                            num_workers=num_workers,

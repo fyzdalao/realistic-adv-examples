@@ -25,6 +25,9 @@ def main(args):
     model, test_loader = setup_model_and_data(args, device)
     test_model_accuracy(model, args, device)
     exp_out_dir = setup_out_dir(args)
+    # Create details subdirectory for detailed output files
+    details_dir = exp_out_dir / "details"
+    details_dir.mkdir(exist_ok=True)
     attack = setup_attack(args)
     attack_results = AttackResults(exp_out_dir)
 
@@ -68,14 +71,18 @@ def main(args):
         with torch.no_grad():
             adv, queries_counter, dist, succ, extra_results = attack(model, xi, yi, target)
 
-        if args.save_img_every is not None and count % args.save_img_every == 0:
-            np.save(exp_out_dir / f"{i}_adv.npy", adv[0].cpu().numpy())
-            np.save(exp_out_dir / f"{i}.npy", xi[0].cpu().numpy())
+        if args.save_img_every is not None and args.save_img_every > 0 and count % args.save_img_every == 0:
+            np.save(details_dir / f"{i}_adv.npy", adv[0].cpu().numpy())
+            np.save(details_dir / f"{i}.npy", xi[0].cpu().numpy())
+            # Save distance trend during attack
+            with open(details_dir / f"{i}.dis", 'w') as f:
+                for idx, dist_info in enumerate(queries_counter.distances):
+                    f.write(f"{idx} {dist_info.distance:.6f}\n")
 
         if succ or not early_stopping:
-            attack_results = attack_results.update_with_success(dist, queries_counter, extra_results)
+            attack_results = attack_results.update_with_success(dist, queries_counter, extra_results, sample_index=i)
         else:
-            attack_results = attack_results.update_with_failure(dist, queries_counter, extra_results)
+            attack_results = attack_results.update_with_failure(dist, queries_counter, extra_results, sample_index=i)
 
         attack_results.log_results(count)
         attack_results.save_results(verbose=True, save_detailed_traces=save_detailed_traces)
@@ -140,6 +147,7 @@ if __name__ == "__main__":
         '--save-img-every',
         default=50,
         type=int,
+        help='Save images and distance trends every N samples. Set to 0 to disable saving.'
     )
     parser.add_argument('--strong-preprocessing',
                         default='0',
@@ -151,6 +159,14 @@ if __name__ == "__main__":
                         default='none',
                         type=str,
                         help='Defense mechanism to use: none, inRND, PSD, or both (for both inRND and PSD)')
+    parser.add_argument('--pawn-thres-prob',
+                        default=0.1,
+                        type=float,
+                        help='Pawn threshold when using probability for margin calculation (default: 0.1)')
+    parser.add_argument('--pawn-thres-logits',
+                        default=0.2,
+                        type=float,
+                        help='Pawn threshold when using logits for margin calculation (default: 0.2)')
     parser.add_argument('--discrete',
                         default='0',
                         type=str,

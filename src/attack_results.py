@@ -14,10 +14,12 @@ class AttackResults:
     path: Path
     successes: int = 0
     distances: list[float] = dataclasses.field(default_factory=list)
+    distance_indices: list[int] = dataclasses.field(default_factory=list)
     queries_counters: list[QueriesCounter] = dataclasses.field(default_factory=list)
     extra_results: list[ExtraResultsDict] = dataclasses.field(default_factory=list)
     failures: int = 0
     failed_distances: list[float] = dataclasses.field(default_factory=list)
+    failed_distance_indices: list[int] = dataclasses.field(default_factory=list)
     failed_queries_counters: list[QueriesCounter] = dataclasses.field(default_factory=list)
     failed_extra_results: list[ExtraResultsDict] = dataclasses.field(default_factory=list)
     _distances_traces_jsonlist: JSONList = dataclasses.field(init=False)
@@ -28,18 +30,20 @@ class AttackResults:
         self._failed_distances_traces_jsonlist = JSONList(self.path / "failed_distances_traces.json")
 
     def update_with_success(self, distance: float, queries_counter: QueriesCounter,
-                            extra_results: ExtraResultsDict) -> "AttackResults":
+                            extra_results: ExtraResultsDict, sample_index: int | None = None) -> "AttackResults":
         return dataclasses.replace(self,
                                    successes=self.successes + 1,
                                    distances=self.distances + [distance],
+                                   distance_indices=self.distance_indices + [sample_index if sample_index is not None else len(self.distances)],
                                    queries_counters=self.queries_counters + [queries_counter],
                                    extra_results=self.extra_results + [extra_results])
 
     def update_with_failure(self, distance: float, queries_counter: QueriesCounter,
-                            extra_results: ExtraResultsDict) -> "AttackResults":
+                            extra_results: ExtraResultsDict, sample_index: int | None = None) -> "AttackResults":
         return dataclasses.replace(self,
                                    failures=self.failures + 1,
                                    failed_distances=self.failed_distances + [distance],
+                                   failed_distance_indices=self.failed_distance_indices + [sample_index if sample_index is not None else len(self.failed_distances)],
                                    failed_queries_counters=self.failed_queries_counters + [queries_counter],
                                    failed_extra_results=self.failed_extra_results + [extra_results])
 
@@ -123,12 +127,21 @@ class AttackResults:
         if verbose:
             print(f"Saved results to {self.path}")
 
-    def get_full_results_dict(self) -> dict[str, float | list[float]]:
+    def get_full_results_dict(self) -> dict[str, float | list[float] | dict[str, float]]:
+        # Format distances as dictionary with indices as keys
+        distances_dict = {}
+        for idx, dist in zip(self.distance_indices, self.distances):
+            distances_dict[str(idx)] = dist
+        
+        failed_distances_dict = {}
+        for idx, dist in zip(self.failed_distance_indices, self.failed_distances):
+            failed_distances_dict[str(idx)] = dist
+        
         d = {
             "successes": self.successes,
-            "distances": self.distances,
+            "distances": distances_dict,
             "failures": self.failures,
-            "failed_distances": self.failed_distances,
+            "failed_distances": failed_distances_dict,
         }
 
         aggregated_queries, aggregated_unsafe_queries = aggregate_queries_counters_list(self.queries_counters)
