@@ -5,11 +5,61 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import scale as mscale
 from matplotlib import transforms as mtransforms
+from matplotlib.ticker import Locator
 from collections import defaultdict
 
 # 设置matplotlib支持中文显示
 plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']  # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+
+
+class ThresholdLocator(Locator):
+    """
+    自定义Locator，在阈值上下分别平均分割刻度
+    """
+    def __init__(self, threshold_value, num_ticks_below=5, num_ticks_above=5):
+        """
+        Args:
+            threshold_value: 阈值
+            num_ticks_below: 阈值以下的刻度数量
+            num_ticks_above: 阈值以上的刻度数量
+        """
+        self.threshold_value = threshold_value
+        self.num_ticks_below = num_ticks_below
+        self.num_ticks_above = num_ticks_above
+    
+    def __call__(self):
+        if self.axis is None:
+            return []
+        vmin, vmax = self.axis.get_view_interval()
+        return self.tick_values(vmin, vmax)
+    
+    def tick_values(self, vmin, vmax):
+        # 阈值以下的刻度
+        if vmin < self.threshold_value:
+            ticks_below = np.linspace(vmin, self.threshold_value, self.num_ticks_below + 1)
+            ticks_below = ticks_below[:-1].tolist()  # 排除阈值本身，避免重复，转换为列表
+        else:
+            ticks_below = []
+        
+        # 阈值以上的刻度
+        if vmax > self.threshold_value:
+            ticks_above = np.linspace(self.threshold_value, vmax, self.num_ticks_above + 1)
+            ticks_above = ticks_above.tolist()
+        else:
+            ticks_above = []
+        
+        # 合并刻度，包括阈值本身
+        if len(ticks_below) > 0 and len(ticks_above) > 0:
+            ticks = ticks_below + [self.threshold_value] + ticks_above
+        elif len(ticks_below) > 0:
+            ticks = ticks_below + [self.threshold_value]
+        elif len(ticks_above) > 0:
+            ticks = [self.threshold_value] + ticks_above
+        else:
+            ticks = [self.threshold_value]
+        
+        return ticks
 
 
 def load_distance_data(details_dir):
@@ -297,8 +347,8 @@ def plot_two_logs_comparison(log_a_dir, log_b_dir):
     medians_b_smooth = smooth_curve(medians_b_filtered, steps_b_filtered, window_size=window_size, method='median')
     
     # 设置y轴压缩阈值
-    # 使用固定值50作为阈值
-    threshold_value = 50.0
+    # 使用固定值作为阈值
+    threshold_value = 0.3
     
     # 原来的自动计算阈值逻辑（已注释，保留备用）
     # # 找到只在早期出现的大值，用于设置y轴压缩阈值
@@ -316,32 +366,46 @@ def plot_two_logs_comparison(log_a_dir, log_b_dir):
     #     threshold_value = np.percentile(all_values, 90)
     
     # 创建单个图：只显示平滑处理后的数据（增大图像尺寸以确保清晰度）
-    fig, ax = plt.subplots(figsize=(12.5, 8))
+    fig, ax = plt.subplots(figsize=(12, 9))
     
     # 设置y轴使用自定义的压缩scale
     ax.set_yscale('compressed', compression_ratio=0.1, threshold_value=threshold_value)
     
     # 绘制平滑处理后的数据（不进行数据压缩，让scale处理）
-    ax.plot(steps_a_filtered, means_a_smooth, label='无防御-平均', linewidth=2, color='#1f77b4', linestyle='-')
-    ax.plot(steps_a_filtered, medians_a_smooth, label='无防御-中位', linewidth=2, color='#1f77b4', linestyle='dashdot', alpha=0.8)
-    ax.plot(steps_b_filtered, means_b_smooth, label='防御 - 平均', linewidth=2, color='#ff7f0e', linestyle='-')
-    ax.plot(steps_b_filtered, medians_b_smooth, label='防御 - 中位', linewidth=2, color='#ff7f0e', linestyle='dashdot', alpha=0.8)
+    ax.plot(steps_b_filtered, means_b_smooth, label='防御 - 平均', linewidth=2.5, color='#ff7f0e', linestyle='-')
+    ax.plot(steps_b_filtered, medians_b_smooth, label='防御 - 中位', linewidth=2.5, color='#ff7f0e', linestyle=':', alpha=0.8)
+    ax.plot(steps_a_filtered, means_a_smooth, label='无防御-平均', linewidth=2.5, color='#1f77b4', linestyle='-')
+    ax.plot(steps_a_filtered, medians_a_smooth, label='无防御-中位', linewidth=2.5, color='#1f77b4', linestyle=':', alpha=0.8)
+
     
     # 设置横轴范围，最小接近0，最大接近50000，以节约空间
     all_steps = np.concatenate([steps_a_filtered, steps_b_filtered])
     x_min =  -1000  # 最小值不要小于0太多，最多减去50
     x_max = min(50000, np.max(all_steps)) + 1000  # 最大值不要超出50000太多，最多加上50
+    # y_min = -1
+    # y_max = 160
+    y_min = 0
+    y_max = 1
     ax.set_xlim(x_min, x_max)
+    ax.set_ylim(y_min, y_max)
+    
+    # 手动指定y轴刻度点列表（可以手动修改）
+    # y_ticks = [0, 10, 20, 30, 40, 50, 70, 90, 110, 130, 150]
+    # y_ticks = [0, 10, 20, 30, 40, 60, 80, 100, 120, 140]
+    y_ticks = [0, 0.10, 0.20, 0.30, 0.50, 0.7, 0.9]
+    
+    # 设置y轴刻度
+    ax.set_yticks(y_ticks)
     
     # 增大所有文字字号，确保在毕业论文中清晰可见
-    ax.set_xlabel('迭代步数', fontsize=18, fontweight='bold')
-    ax.set_ylabel('距离', fontsize=18, fontweight='bold')
-    # ax.set_title('距离随迭代步数的变化趋势', fontsize=20, fontweight='bold', pad=20)
-    ax.legend(fontsize=16, loc='best', framealpha=0.9)
+    ax.set_xlabel('模型访问次数', fontsize=28, fontweight='bold')
+    ax.set_ylabel('距离', fontsize=28, fontweight='bold')
+    # ax.set_title('距离随迭代步数的变化趋势', fontsize=32, fontweight='bold', pad=20)
+    ax.legend(fontsize=26, loc='best', framealpha=0.9)
     
     # 增大坐标轴刻度标签字号
-    ax.tick_params(axis='both', which='major', labelsize=16)
-    ax.tick_params(axis='both', which='minor', labelsize=14)
+    ax.tick_params(axis='both', which='major', labelsize=22)
+    ax.tick_params(axis='both', which='minor', labelsize=20)
     
     ax.grid(True, alpha=0.3, linewidth=1.5)
     
@@ -358,13 +422,19 @@ def plot_two_logs_comparison(log_a_dir, log_b_dir):
 
 if __name__ == "__main__":
     # 指定两个日志目录
-    # 原来的geoda目录（已注释，方便之后恢复）
+    # # 原来的geoda目录（已注释，方便之后恢复）
     # log_a_dir = r"results\resnet_imagenet\l2\geoda\1204-07-38-19_discrete-0_targeted-0_early-0_binary_0.000"
     # log_b_dir = r"results\resnet_imagenet\l2\geoda\1204-07-38-43_discrete-0_targeted-0_early-0_binary_0.000"
     
     # hsja目录
-    log_a_dir = r"results\resnet_imagenet\l2\hsja\1204-09-04-04_discrete-0_targeted-0_early-0_binary_0.000"
-    log_b_dir = r"results\resnet_imagenet\l2\hsja\1204-09-15-44_discrete-0_targeted-0_early-0_binary_0.000"
+    # log_a_dir = r"results\resnet_imagenet\l2\hsja\1204-09-04-04_discrete-0_targeted-0_early-0_binary_0.000"
+    # log_b_dir = r"results\resnet_imagenet\l2\hsja\1204-09-15-44_discrete-0_targeted-0_early-0_binary_0.000"
+
+
+    # hsja linf
+    log_a_dir = r"results\resnet_imagenet\linf\hsja\1205-02-01-46_discrete-0_targeted-0_early-0_binary_0.000"
+    log_b_dir = r"results\resnet_imagenet\linf\hsja\1205-03-25-47_discrete-0_targeted-0_early-0_binary_0.000"
+
     
     # 检查目录是否存在
     if not os.path.exists(log_a_dir):
