@@ -348,7 +348,7 @@ def plot_two_logs_comparison(log_a_dir, log_b_dir):
     
     # 设置y轴压缩阈值
     # 使用固定值作为阈值
-    threshold_value = 0.3
+    threshold_value = 50
     
     # 原来的自动计算阈值逻辑（已注释，保留备用）
     # # 找到只在早期出现的大值，用于设置y轴压缩阈值
@@ -390,9 +390,9 @@ def plot_two_logs_comparison(log_a_dir, log_b_dir):
     ax.set_ylim(y_min, y_max)
     
     # 手动指定y轴刻度点列表（可以手动修改）
-    # y_ticks = [0, 10, 20, 30, 40, 50, 70, 90, 110, 130, 150]
+    y_ticks = [0, 10, 20, 30, 40, 50, 70, 90, 110, 130, 150]
     # y_ticks = [0, 10, 20, 30, 40, 60, 80, 100, 120, 140]
-    y_ticks = [0, 0.10, 0.20, 0.30, 0.50, 0.7, 0.9]
+    # y_ticks = [0, 0.10, 0.20, 0.30, 0.50, 0.7, 0.9]
     
     # 设置y轴刻度
     ax.set_yticks(y_ticks)
@@ -432,8 +432,12 @@ if __name__ == "__main__":
 
 
     # hsja linf
-    log_a_dir = r"results\resnet_imagenet\linf\hsja\1205-02-01-46_discrete-0_targeted-0_early-0_binary_0.000"
-    log_b_dir = r"results\resnet_imagenet\linf\hsja\1205-03-25-47_discrete-0_targeted-0_early-0_binary_0.000"
+    # log_a_dir = r"results\resnet_imagenet\linf\hsja\1205-02-01-46_discrete-0_targeted-0_early-0_binary_0.000"
+    # log_b_dir = r"results\resnet_imagenet\linf\hsja\1205-03-25-47_discrete-0_targeted-0_early-0_binary_0.000"
+
+    # signOPT
+    log_a_dir = r"results\resnet_imagenet\l2\sign_opt\1205-06-15-16_discrete-0_targeted-0_early-0_binary_0.000"
+    log_b_dir = r"results\resnet_imagenet\l2\sign_opt\1205-06-15-21_discrete-0_targeted-0_early-0_binary_0.000"
 
     
     # 检查目录是否存在
