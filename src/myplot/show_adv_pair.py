@@ -10,6 +10,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import matplotlib.pyplot as plt
+import matplotlib
+# 配置matplotlib支持中文显示
+matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'SimSun', 'Arial Unicode MS']
+matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 import numpy as np
 import torch
 from torchvision import models
@@ -151,14 +155,14 @@ def main():
     parser = argparse.ArgumentParser(description="显示原图与对抗样本")
     parser.add_argument("--output",
                         default=None,
-                        help=f"输出图片路径（默认保存到 {DEFAULT_PIC_DIR} 下并自动命名）")
+                        help=f"输出PDF路径（默认保存到 {DEFAULT_PIC_DIR} 下并自动命名，格式为PDF）")
     parser.add_argument("--times",
                         type=float,
                         default=1.0,
                         help="放大对抗扰动的倍数（orig 保持不变）")
     parser.add_argument("--gpu",
                         type=int,
-                        default=1,
+                        default=0,
                         help="使用的 GPU 编号（默认：1）")
     args = parser.parse_args()
 
@@ -208,7 +212,7 @@ def main():
 
     for ax, img, title in zip(axes, display_images, titles):
         ax.imshow(img.squeeze() if img.shape[-1] == 1 else img)
-        ax.set_title(title, fontsize=10)
+        ax.set_title(title, fontsize=22)
         ax.axis("off")
 
     plt.tight_layout()
@@ -217,13 +221,17 @@ def main():
         output_path = Path(args.output)
         if not output_path.is_absolute():
             output_path = DEFAULT_PIC_DIR / output_path
+        # 如果没有扩展名，添加.pdf
+        if not output_path.suffix:
+            output_path = output_path.with_suffix('.pdf')
     else:
         DEFAULT_PIC_DIR.mkdir(parents=True, exist_ok=True)
         stems = "_".join(path.stem for path in paths)
-        output_name = f"{stems}.png"
+        output_name = f"{stems}.pdf"
         output_path = DEFAULT_PIC_DIR / output_name
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_path, bbox_inches="tight")
+    # 保存为PDF格式，文字将以矢量形式保存，可以无损缩放
+    plt.savefig(output_path, bbox_inches="tight", format='pdf', dpi=300)
     print(f"已保存图像到 {output_path}")
     plt.close(fig)
 

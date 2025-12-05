@@ -62,12 +62,13 @@ class ThresholdLocator(Locator):
         return ticks
 
 
-def load_distance_data(details_dir):
+def load_distance_data(details_dir, allowed_files=None):
     """
     读取details目录下所有.dis文件的数据
     
     Args:
         details_dir: details文件夹的路径
+        allowed_files: 可选，允许处理的文件名集合（只包含文件名，不包含路径）
         
     Returns:
         dict: 键为迭代步数，值为该步数对应的所有距离值的列表
@@ -78,11 +79,18 @@ def load_distance_data(details_dir):
     # 查找所有.dis文件
     dis_files = glob.glob(os.path.join(details_dir, "*.dis"))
     
+    # 如果指定了允许的文件列表，则只处理这些文件
+    if allowed_files is not None:
+        dis_files = [f for f in dis_files if os.path.basename(f) in allowed_files]
+    
     print(f"找到 {len(dis_files)} 个.dis文件")
     
     # 读取每个文件
     for dis_file in dis_files:
         try:
+            max_step = -1
+            last_distance = None
+            
             with open(dis_file, 'r') as f:
                 for line in f:
                     line = line.strip()
@@ -92,6 +100,17 @@ def load_distance_data(details_dir):
                             step = int(parts[0])
                             distance = float(parts[1])
                             step_distances[step].append(distance)
+                            
+                            # 记录该文件的最大迭代步数和最后一次的距离值
+                            if step > max_step:
+                                max_step = step
+                                last_distance = distance
+            
+            # 如果该文件的迭代次数不到50000，用最后一次迭代的距离值填充
+            if max_step < 50000 and last_distance is not None:
+                for fill_step in range(max_step + 1, 50001):
+                    step_distances[fill_step].append(last_distance)
+                    
         except Exception as e:
             print(f"读取文件 {dis_file} 时出错: {e}")
             continue
@@ -296,32 +315,48 @@ def calculate_statistics(step_distances):
     
     return steps, means, medians
 
-def plot_two_logs_comparison(log_a_dir, log_b_dir):
+def plot_two_logs_comparison(log_a_dir, log_b_dir, threshold_value, y_min, y_max, y_ticks):
     """
     绘制两个日志的距离趋势对比图
     
     Args:
         log_a_dir: 日志A的目录路径（包含details文件夹的目录）
         log_b_dir: 日志B的目录路径（包含details文件夹的目录）
+        threshold_value: y轴压缩阈值
+        y_min: y轴最小值
+        y_max: y轴最大值
+        y_ticks: y轴刻度点列表
     """
-    # 处理日志A
+    # 获取两个日志的details目录
     details_a_dir = os.path.join(log_a_dir, "details")
     if not os.path.exists(details_a_dir):
         raise ValueError(f"找不到日志A的details目录: {details_a_dir}")
     
-    print("处理日志A...")
-    step_distances_a = load_distance_data(details_a_dir)
-    if not step_distances_a:
-        raise ValueError("日志A没有找到任何有效的数据")
-    steps_a, means_a, medians_a = calculate_statistics(step_distances_a)
-    
-    # 处理日志B
     details_b_dir = os.path.join(log_b_dir, "details")
     if not os.path.exists(details_b_dir):
         raise ValueError(f"找不到日志B的details目录: {details_b_dir}")
     
+    # 找出两个日志中共同存在的.dis文件名
+    dis_files_a = set(os.path.basename(f) for f in glob.glob(os.path.join(details_a_dir, "*.dis")))
+    dis_files_b = set(os.path.basename(f) for f in glob.glob(os.path.join(details_b_dir, "*.dis")))
+    common_files = dis_files_a & dis_files_b  # 交集
+    
+    print(f"日志A中有 {len(dis_files_a)} 个.dis文件")
+    print(f"日志B中有 {len(dis_files_b)} 个.dis文件")
+    print(f"共同存在的文件有 {len(common_files)} 个")
+    
+    if len(common_files) == 0:
+        raise ValueError("两个日志中没有共同存在的.dis文件")
+    
+    # 只处理共同存在的文件
+    print("处理日志A...")
+    step_distances_a = load_distance_data(details_a_dir, allowed_files=common_files)
+    if not step_distances_a:
+        raise ValueError("日志A没有找到任何有效的数据")
+    steps_a, means_a, medians_a = calculate_statistics(step_distances_a)
+    
     print("处理日志B...")
-    step_distances_b = load_distance_data(details_b_dir)
+    step_distances_b = load_distance_data(details_b_dir, allowed_files=common_files)
     if not step_distances_b:
         raise ValueError("日志B没有找到任何有效的数据")
     steps_b, means_b, medians_b = calculate_statistics(step_distances_b)
@@ -346,25 +381,6 @@ def plot_two_logs_comparison(log_a_dir, log_b_dir):
     means_b_smooth = smooth_curve(means_b_filtered, steps_b_filtered, window_size=window_size, method='median')
     medians_b_smooth = smooth_curve(medians_b_filtered, steps_b_filtered, window_size=window_size, method='median')
     
-    # 设置y轴压缩阈值
-    # 使用固定值作为阈值
-    threshold_value = 50
-    
-    # 原来的自动计算阈值逻辑（已注释，保留备用）
-    # # 找到只在早期出现的大值，用于设置y轴压缩阈值
-    # # 找到横轴>=150的数据中的最大值，作为压缩阈值
-    # late_mask_a = steps_a_filtered >= 150
-    # late_mask_b = steps_b_filtered >= 150
-    # 
-    # if np.sum(late_mask_a) > 0 and np.sum(late_mask_b) > 0:
-    #     late_max_a = np.max(np.concatenate([means_a_smooth[late_mask_a], medians_a_smooth[late_mask_a]]))
-    #     late_max_b = np.max(np.concatenate([means_b_smooth[late_mask_b], medians_b_smooth[late_mask_b]]))
-    #     threshold_value = max(late_max_a, late_max_b) * 1.1  # 稍微放宽一点
-    # else:
-    #     # 如果没有后期数据，使用所有数据的90%分位数作为阈值
-    #     all_values = np.concatenate([means_a_smooth, medians_a_smooth, means_b_smooth, medians_b_smooth])
-    #     threshold_value = np.percentile(all_values, 90)
-    
     # 创建单个图：只显示平滑处理后的数据（增大图像尺寸以确保清晰度）
     fig, ax = plt.subplots(figsize=(12, 9))
     
@@ -382,17 +398,8 @@ def plot_two_logs_comparison(log_a_dir, log_b_dir):
     all_steps = np.concatenate([steps_a_filtered, steps_b_filtered])
     x_min =  -1000  # 最小值不要小于0太多，最多减去50
     x_max = min(50000, np.max(all_steps)) + 1000  # 最大值不要超出50000太多，最多加上50
-    # y_min = -1
-    # y_max = 160
-    y_min = 0
-    y_max = 1
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
-    
-    # 手动指定y轴刻度点列表（可以手动修改）
-    y_ticks = [0, 10, 20, 30, 40, 50, 70, 90, 110, 130, 150]
-    # y_ticks = [0, 10, 20, 30, 40, 60, 80, 100, 120, 140]
-    # y_ticks = [0, 0.10, 0.20, 0.30, 0.50, 0.7, 0.9]
     
     # 设置y轴刻度
     ax.set_yticks(y_ticks)
@@ -421,24 +428,44 @@ def plot_two_logs_comparison(log_a_dir, log_b_dir):
     plt.show()
 
 if __name__ == "__main__":
+    # ========== 配置参数 ==========
     # 指定两个日志目录
-    # # 原来的geoda目录（已注释，方便之后恢复）
-    # log_a_dir = r"results\resnet_imagenet\l2\geoda\1204-07-38-19_discrete-0_targeted-0_early-0_binary_0.000"
-    # log_b_dir = r"results\resnet_imagenet\l2\geoda\1204-07-38-43_discrete-0_targeted-0_early-0_binary_0.000"
+
+
+    # geoda
+    log_a_dir = r"results\resnet_imagenet\l2\geoda\1204-07-38-19_discrete-0_targeted-0_early-0_binary_0.000"
+    log_b_dir = r"results\resnet_imagenet\l2\geoda\1204-07-38-43_discrete-0_targeted-0_early-0_binary_0.000"
+    threshold_value = 50
+    y_min = -1
+    y_max = 160
+    y_ticks = [0, 10, 20, 30, 40, 50, 70, 90, 110, 130, 150]
     
-    # hsja目录
+    # # hsja l2
     # log_a_dir = r"results\resnet_imagenet\l2\hsja\1204-09-04-04_discrete-0_targeted-0_early-0_binary_0.000"
     # log_b_dir = r"results\resnet_imagenet\l2\hsja\1204-09-15-44_discrete-0_targeted-0_early-0_binary_0.000"
+    # threshold_value = 40
+    # y_min = -1
+    # y_max = 160
+    # y_ticks = [0, 10, 20, 30, 40, 60, 80, 100, 120, 140]
 
-
-    # hsja linf
+    # # hsja linf
     # log_a_dir = r"results\resnet_imagenet\linf\hsja\1205-02-01-46_discrete-0_targeted-0_early-0_binary_0.000"
     # log_b_dir = r"results\resnet_imagenet\linf\hsja\1205-03-25-47_discrete-0_targeted-0_early-0_binary_0.000"
+    # threshold_value = 0.3
+    # y_min = 0
+    # y_max = 1
+    # y_ticks = [0, 0.10, 0.20, 0.30, 0.50, 0.7, 0.9]
 
     # signOPT
-    log_a_dir = r"results\resnet_imagenet\l2\sign_opt\1205-06-15-16_discrete-0_targeted-0_early-0_binary_0.000"
-    log_b_dir = r"results\resnet_imagenet\l2\sign_opt\1205-06-15-21_discrete-0_targeted-0_early-0_binary_0.000"
+    # log_a_dir = r"results\resnet_imagenet\l2\sign_opt\1205-06-15-16_discrete-0_targeted-0_early-0_binary_0.000"
+    # log_b_dir = r"results\resnet_imagenet\l2\sign_opt\1205-06-15-21_discrete-0_targeted-0_early-0_binary_0.000"
+    # threshold_value = 50
+    # y_min = -1
+    # y_max = 160
+    # y_ticks = [0, 10, 20, 30, 40, 50, 70, 90, 110, 130, 150]
 
+
+    # ============================
     
     # 检查目录是否存在
     if not os.path.exists(log_a_dir):
@@ -448,6 +475,6 @@ if __name__ == "__main__":
         print(f"警告: 目录 {log_b_dir} 不存在")
         print("请修改log_b_dir变量为正确的路径")
     else:
-        plot_two_logs_comparison(log_a_dir, log_b_dir)
+        plot_two_logs_comparison(log_a_dir, log_b_dir, threshold_value, y_min, y_max, y_ticks)
 
 
