@@ -41,6 +41,10 @@ def main(args):
         if count == args.num:
             break
 
+        # Skip samples before start_index
+        if i < args.start_index:
+            continue
+
         if isinstance(batch, dict):
             xi, yi = batch["image"], batch["label"]
         else:
@@ -108,6 +112,7 @@ if __name__ == "__main__":
     parser.add_argument('--targeted', default='0', type=str, help='targeted or untargeted')
     parser.add_argument('--norm', default='linf', type=str, help='Norm for attack, linf only')
     parser.add_argument('--num', default=2, type=int, help='Number of samples to be attacked from test dataset.')
+    parser.add_argument('--start-index', default=0, type=int, help='Starting index of samples to process (skip samples before this index).')
     parser.add_argument('--max-queries', default=None, type=int, help='Maximum queries for the attack')
     parser.add_argument('--max-unsafe-queries', default=None, type=int, help='Maximum unsafe queries for the attack')
     parser.add_argument('--batch', default=1, type=int, help='attack batch size.')
