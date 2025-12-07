@@ -22,6 +22,7 @@ class AttackResults:
     failed_distance_indices: list[int] = dataclasses.field(default_factory=list)
     failed_queries_counters: list[QueriesCounter] = dataclasses.field(default_factory=list)
     failed_extra_results: list[ExtraResultsDict] = dataclasses.field(default_factory=list)
+    clean_accuracy: float | None = None
     _distances_traces_jsonlist: JSONList = dataclasses.field(init=False)
     _failed_distances_traces_jsonlist: JSONList = dataclasses.field(init=False)
 
@@ -87,6 +88,8 @@ class AttackResults:
             "mean_unsafe_queries": np.mean(np.array(self._get_overall_unsafe_queries())),
             "median_unsafe_queries": np.median(np.array(self._get_overall_unsafe_queries())),
         }
+        if self.clean_accuracy is not None:
+            results_dict["clean_accuracy"] = self.clean_accuracy
         aggregated_queries, aggregated_unsafe_queries = aggregate_queries_counters_list(self.queries_counters)
 
         for stat, stat_fn in (("mean", np.mean), ("median", np.median)):

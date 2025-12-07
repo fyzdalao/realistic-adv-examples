@@ -16,12 +16,14 @@ class TorchModelWrapper(ModelWrapper):
                  take_sigmoid: bool = True,
                  defense: str = 'none',
                  pawn_thres_prob: float = 0.1,
-                 pawn_thres_logits: float = 0.2):
+                 pawn_thres_logits: float = 0.2,
+                 use_prob_for_margin: int = 0):
         super().__init__(n_class, im_mean, im_std, take_sigmoid)
         self._model = model
         self.defense = defense
         self.pawn_thres_prob = pawn_thres_prob
         self.pawn_thres_logits = pawn_thres_logits
+        self.use_prob_for_margin = use_prob_for_margin
 
     def make_model_eval(self):
         self._model.eval()
@@ -55,7 +57,7 @@ class TorchModelWrapper(ModelWrapper):
     '''
     trying to add pawn sacrifice defense
     '''
-    def _predict_prob(self, image: torch.Tensor, verbose: bool = False, use_prob_for_margin: int = 0) -> torch.Tensor:
+    def _predict_prob(self, image: torch.Tensor, verbose: bool = False) -> torch.Tensor:
 
         rnd_nu = 0.01
 
@@ -78,8 +80,8 @@ class TorchModelWrapper(ModelWrapper):
 
             # do something to logits.
             if self.defense == 'PSD' or self.defense == 'both':
-                if use_prob_for_margin == 1:
-                    # 默认逻辑：根据 prob_ori 计算 margin_ori
+                if self.use_prob_for_margin == 1:
+                    # 逻辑：根据 prob_ori 计算 margin_ori
                     prob_ori = F.softmax(logits, dim=1)
                     value, index_ori = torch.topk(prob_ori, k=2, dim=1)
                     margin_ori = value[:, 0] - value[:, 1]
@@ -88,7 +90,7 @@ class TorchModelWrapper(ModelWrapper):
                     logits_value, index_ori = torch.topk(logits, k=2, dim=1)
                     margin_ori = logits_value[:, 0] - logits_value[:, 1]
 
-                if use_prob_for_margin == 1 :
+                if self.use_prob_for_margin == 1 :
                     pawn_thres = self.pawn_thres_prob
                 else:
                     pawn_thres = self.pawn_thres_logits

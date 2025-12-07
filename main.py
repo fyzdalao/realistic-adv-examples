@@ -23,13 +23,13 @@ def main(args):
     device = torch.device(f"cuda:{args.gpu}")
 
     model, test_loader = setup_model_and_data(args, device)
-    test_model_accuracy(model, args, device)
+    clean_accuracy = test_model_accuracy(model, args, device)
     exp_out_dir = setup_out_dir(args)
     # Create details subdirectory for detailed output files
     details_dir = exp_out_dir / "details"
     details_dir.mkdir(exist_ok=True)
     attack = setup_attack(args)
-    attack_results = AttackResults(exp_out_dir)
+    attack_results = AttackResults(exp_out_dir, clean_accuracy=clean_accuracy)
 
     seeds = np.random.randint(10000, size=10000)
 
@@ -172,6 +172,10 @@ if __name__ == "__main__":
                         default=0.2,
                         type=float,
                         help='Pawn threshold when using logits for margin calculation (default: 0.2)')
+    parser.add_argument('--use-prob-for-margin',
+                        default='0',
+                        type=str,
+                        help='Whether to use probability for margin calculation in PSD defense (1 for probability, 0 for logits, default: 0)')
     parser.add_argument('--discrete',
                         default='0',
                         type=str,

@@ -10,7 +10,7 @@ from src import dataset
 from src.model_wrappers import ModelWrapper
 
 
-def test_model_accuracy(model: ModelWrapper, args: Namespace, device: torch.device, num_samples: int = 5000, random_seed: int = 42) -> None:
+def test_model_accuracy(model: ModelWrapper, args: Namespace, device: torch.device, num_samples: int = 10000, random_seed: int = 42) -> float | None:
     """
     Test model accuracy on ImageNet test data.
     
@@ -112,4 +112,6 @@ def test_model_accuracy(model: ModelWrapper, args: Namespace, device: torch.devi
     torch.cuda.empty_cache()
     gc.collect()
     print("Accuracy test completed, memory released\n")
+    
+    return accuracy
 
