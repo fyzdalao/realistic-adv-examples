@@ -2,6 +2,7 @@
 src/myplot/npys/
 src/myplot/pics/
 src/run_config
+accResult/
 # Created by https://www.toptal.com/developers/gitignore/api/macos,linux,visualstudiocode,pycharm,python,jupyternotebooks
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,linux,visualstudiocode,pycharm,python,jupyternotebooks
 
